@@ -8,7 +8,7 @@ export class SkillTreeData implements ISkillTreeData {
     characterData: { [id: string]: ICharacter };
     groups: { [id: string]: IGroup };
     root: IRootNode;
-    nodes: { [id: string]: SkillNode };
+    nodes: Array<SkillNode>;
     extraImages: { [id: string]: IClassImage };
     min_x: number;
     min_y: number;
@@ -29,7 +29,7 @@ export class SkillTreeData implements ISkillTreeData {
     ascedancyNodes: { [id: string]: SkillNode };
 
     constructor(skillTree: ISkillTreeData, options: ISkillTreeOptions) {
-        this.version = skillTree.version = 4;
+        this.version = skillTree.version = 3;
         this.fullscreen = skillTree.fullscreen = 0;
         this.skillTreeOtions = options;
         this.skillTreeUtilities = new SkillTreeUtilities(this);
@@ -50,35 +50,44 @@ export class SkillTreeData implements ISkillTreeData {
         this.height = Math.abs(this.min_y) + Math.abs(this.max_y);
         this.maxZoom = skillTree.imageZoomLevels[skillTree.imageZoomLevels.length - 1];
 
-        // Setup in/out properties correctly
+        //// Setup in/out properties correctly
         {
             for (let id in skillTree.nodes) {
                 skillTree.nodes[id].in = [];
             }
             for (let id in skillTree.nodes) {
-                if (skillTree.nodes[id].m) {
+                let node = skillTree.nodes[id];
+                if (node.m) {
                     continue;
                 }
-                for (let outId of skillTree.nodes[id].out) {
-                    if (skillTree.nodes[id].in.indexOf(outId) < 0) {
-                        skillTree.nodes[id].in.push(outId);
+                for (let outId of node.out) {
+                    let out = skillTree.nodes.find(n => n.id === outId);
+                    if (out === undefined) {
+                        continue;
                     }
-                    if (skillTree.nodes[outId].out.indexOf(+id) < 0) {
-                        skillTree.nodes[outId].out.push(+id);
+                    if (node.in.indexOf(out.id) < 0) {
+                        node.in.push(out.id);
+                    }
+                    if (out.out.indexOf(node.id) < 0) {
+                        out.out.push(node.id);
                     }
                 }
-                for (let inId of skillTree.nodes[id].in) {
-                    if (skillTree.nodes[id].out.indexOf(inId) < 0) {
-                        skillTree.nodes[id].out.push(inId);
+                for (let inId of node.in) {
+                    let inNode = skillTree.nodes.find(n => n.id === inId);
+                    if (inNode === undefined) {
+                        continue;
                     }
-                    if (skillTree.nodes[inId].in.indexOf(+id) < 0) {
-                        skillTree.nodes[inId].in.push(+id);
+                    if (node.out.indexOf(inNode.id) < 0) {
+                        node.out.push(inNode.id);
+                    }
+                    if (inNode.in.indexOf(node.id) < 0) {
+                        inNode.in.push(node.id);
                     }
                 }
             }
         }
 
-        this.nodes = {};
+        this.nodes = [];
         this.classStartNodes = {};
         this.ascedancyNodes = {};
         for (let id in skillTree.nodes) {
@@ -96,18 +105,18 @@ export class SkillTreeData implements ISkillTreeData {
 
             this.nodes[id] = node;
             if (node.ascendancyName !== "") {
-                this.ascedancyNodes[id] = node;
+                this.ascedancyNodes[node.id] = node;
             }
             if (node.spc.length > 0) {
-                this.classStartNodes[id] = node;
+                this.classStartNodes[node.id] = node;
             }
         }
     }
 
     public getStartClass = (): number => {
         for (let id in this.classStartNodes) {
-            if (this.nodes[id].is(SkillNodeStates.Active)) {
-                return this.nodes[id].spc[0];
+            if (this.classStartNodes[id].is(SkillNodeStates.Active)) {
+                return this.classStartNodes[id].spc[0];
             }
         }
         return 0;
@@ -115,11 +124,11 @@ export class SkillTreeData implements ISkillTreeData {
 
     public getAscendancyClass = (): number => {
         for (let id in this.ascedancyNodes) {
-            if (this.nodes[id].isAscendancyStart && this.nodes[id].is(SkillNodeStates.Active)) {
+            if (this.ascedancyNodes[id].isAscendancyStart && this.ascedancyNodes[id].is(SkillNodeStates.Active)) {
                 for (let classid in this.skillTreeOtions.ascClasses) {
                     for (let ascid in this.skillTreeOtions.ascClasses[classid].classes) {
                         let asc = this.skillTreeOtions.ascClasses[classid].classes[ascid];
-                        if (asc.name === this.nodes[id].dn) {
+                        if (asc.name === this.ascedancyNodes[id].dn) {
                             return +ascid;
                         }
                     }
@@ -135,7 +144,7 @@ export class SkillTreeData implements ISkillTreeData {
         for (let id in this.nodes) {
             let node = this.nodes[id];
             if (node.is(SkillNodeStates.Active)) {
-                skilled[id] = node;
+                skilled[node.id] = node;
             }
         }
         return skilled;
@@ -146,18 +155,18 @@ export class SkillTreeData implements ISkillTreeData {
         for (let id in this.nodes) {
             let node = this.nodes[id];
             if (node.is(SkillNodeStates.Hovered) || node.is(SkillNodeStates.Pathing)) {
-                hovered[id] = node;
+                hovered[node.id] = node;
             }
         }
         return hovered;
     }
 
-    public getNodes = (state: SkillNodeStates): { [id: string]: SkillNode } => {
+    public getNodes = (state: SkillNodeStates = SkillNodeStates.None): { [id: string]: SkillNode } => {
         let n: { [id: string]: SkillNode } = {};
         for (let id in this.nodes) {
             let node = this.nodes[id];
-            if (node.is(state)) {
-                n[id] = node;
+            if (node.is(state) || state === SkillNodeStates.None) {
+                n[node.id] = node;
             }
         }
 

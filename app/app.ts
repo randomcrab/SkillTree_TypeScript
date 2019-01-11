@@ -148,7 +148,7 @@ namespace App {
 
         let options = new Array<HTMLOptionElement>();
         for (let id in skillTreeData.classStartNodes) {
-            let node = skillTreeData.nodes[id];
+            let node = skillTreeData.classStartNodes[id];
 
             let e = document.createElement("option");
             e.text = skillTreeOptions.ascClasses[node.spc[0]].name;
@@ -244,10 +244,10 @@ namespace App {
         let background_graphic = PIXI.TilingSprite.from("Background1", skillTreeData.width * (skillTreeData.maxZoom * 1.25), skillTreeData.height * (skillTreeData.maxZoom * 1.25));
         background_graphic.anchor.set(.5);
         viewport.addChild(background_graphic);
-
+        let nodes = skillTreeData.getNodes();
         for (let id in skillTreeData.groups) {
             let group = skillTreeData.groups[id];
-            if (group.n.find(id => skillTreeData.nodes[id].ascendancyName !== "") !== undefined || group.oo.length === 0) {
+            if (group.n.find(id =>  nodes[id].ascendancyName !== "") !== undefined || group.oo.length === 0) {
                 continue;
             }
 
@@ -287,10 +287,10 @@ namespace App {
 
         for (let id in skillTreeData.groups) {
             let group = skillTreeData.groups[id];
-            if (group.n.filter(id => skillTreeData.nodes[id].isAscendancyStart).length <= 0) {
+            if (group.n.filter(id => nodes[id].isAscendancyStart).length <= 0) {
                 continue;
             }
-            let ascendancyName = group.n.map(id => skillTreeData.nodes[id].ascendancyName)[0];
+            let ascendancyName = group.n.map(id => nodes[id].ascendancyName)[0];
             let sprite = PIXI.Sprite.from(`Classes${ascendancyName}`);
             sprite.position.set(Math.ceil(group.x * skillTreeData.maxZoom), Math.ceil(group.y * skillTreeData.maxZoom));
             sprite.anchor.set(.5);
@@ -319,9 +319,9 @@ namespace App {
         }
 
         let drawn_connections: { [id: number]: Array<number> } = {};
-        for (let id in skillTreeData.nodes) {
-            var node = skillTreeData.nodes[id];
-            let nodes = node.in
+        for (let id in nodes) {
+            var node = nodes[id];
+            let outs = node.out
                 .filter((outID) => {
                     if (drawn_connections[outID] === undefined || drawn_connections[+id] === undefined) {
                         return true;
@@ -339,9 +339,9 @@ namespace App {
                     drawn_connections[outID].push(+id);
                     drawn_connections[+id].push(outID);
 
-                    return skillTreeData.nodes[outID]
+                    return nodes[outID]
                 });
-            connections.addChild(node.createConnections(nodes));
+            connections.addChild(node.createConnections(outs));
             skillIcons.addChild(node.createNodeGraphic(skillTreeData.skillSprites, skillTreeData.imageZoomLevels.length - 1));
             let frame = node.createNodeFrame();
             if (frame !== null) {
@@ -350,7 +350,7 @@ namespace App {
         }
 
         for (let id of skillTreeData.root.out) {
-            let node = skillTreeData.nodes[id];
+            let node = nodes[id];
             if (node.spc.length !== 1) {
                 // Root node with no/multiple classes?
                 continue;
@@ -404,8 +404,9 @@ namespace App {
         if (highlights.children.length > 0) {
             highlights.removeChildren();
         }
-        for (let id in skillTreeData.nodes) {
-            let node = skillTreeData.nodes[id];
+        let nodes = skillTreeData.getNodes();
+        for (let id in nodes) {
+            let node = nodes[id];
             let highlight = node.createNodeHighlight();
             if (highlight !== null) {
                 highlights.addChild(highlight)
@@ -431,8 +432,9 @@ namespace App {
             characterStarts_active.removeChildren();
         }
 
+        let nodes = skillTreeData.getNodes();
         for (let id of skillTreeData.root.out) {
-            let node = skillTreeData.nodes[id];
+            let node = nodes[id];
             if (node.spc.length !== 1 || !node.is(SkillNodeStates.Active)) {
                 continue;
             }
@@ -441,10 +443,10 @@ namespace App {
                 throw new Error(`Couldn't find class name from constants: ${node.spc[0]}`);
             }
 
-            let class_node_graphic = PIXI.Sprite.from(`Background${class_name.replace("Class", "")}`);
-            class_node_graphic.anchor.set(.5)
-            class_node_graphic.position.set(node.group.x * skillTreeData.maxZoom, node.group.y * skillTreeData.maxZoom);
-            backgrounds_active.addChild(class_node_graphic);
+            //let class_node_graphic = PIXI.Sprite.from(`Background${class_name.replace("Class", "")}`);
+            //class_node_graphic.anchor.set(.5)
+            //class_node_graphic.position.set(node.group.x * skillTreeData.maxZoom, node.group.y * skillTreeData.maxZoom);
+            //backgrounds_active.addChild(class_node_graphic);
 
             let common_name = skillTreeData.constants.classesToName[class_name];
             let node_graphic = PIXI.Sprite.from(`center${common_name.toLocaleLowerCase()}`);
@@ -483,10 +485,11 @@ namespace App {
         }
 
         let drawn_connections: { [id: number]: Array<number> } = {};
-        for (let id in skillTreeData.nodes) {
-            let node = skillTreeData.nodes[id];
+        let nodes = skillTreeData.getNodes();
+        for (let id in nodes) {
+            let node = nodes[id];
             if (node.is(SkillNodeStates.Pathing)) {
-                let nodes = node.in
+                let outs = node.out
                     .filter((outID) => {
                         if (drawn_connections[outID] === undefined || drawn_connections[+id] === undefined) {
                             return true;
@@ -504,10 +507,10 @@ namespace App {
                         drawn_connections[outID].push(+id);
                         drawn_connections[+id].push(outID);
 
-                        return skillTreeData.nodes[outID]
+                        return nodes[outID]
                     });
 
-                pathing_connections.addChild(node.createConnections(nodes));
+                pathing_connections.addChild(node.createConnections(outs));
                 let frame = node.createNodeFrame();
                 if (frame !== null) {
                     pathing_skillIcons.addChild(frame);
@@ -570,13 +573,14 @@ namespace App {
         }
 
         let drawn_connections: { [id: number]: Array<number> } = {};
-        for (let id in skillTreeData.nodes) {
-            var node = skillTreeData.nodes[id];
+        var nodes = skillTreeData.getNodes();
+        for (let id in nodes) {
+            var node = nodes[id];
             if (!node.is(SkillNodeStates.Active) || node.spc.length > 0) {
                 continue;
             }
 
-            let nodes = node.in
+            let outs = node.out
                 .filter((outID) => {
                     if (drawn_connections[outID] === undefined || drawn_connections[+id] === undefined) {
                         return true;
@@ -594,11 +598,11 @@ namespace App {
                     drawn_connections[outID].push(+id);
                     drawn_connections[+id].push(outID);
 
-                    return skillTreeData.nodes[outID]
+                    return nodes[outID]
                 });
 
-            connections_active.addChild(node.createConnections(nodes));
-            for (let out of nodes) {
+            connections_active.addChild(node.createConnections(outs));
+            for (let out of outs) {
                 let frame = out.createNodeFrame();
                 if (frame !== null) {
                     skillIcons_active.addChild(frame);

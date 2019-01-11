@@ -82,7 +82,7 @@ export class SkillNode implements ISkillNode {
         SkillTreeEvents.subscribe("node", this.rebindNodeEvents);
     }
 
-    private getArc = (oidx: number): number => this.skillsPerOrbit.length > this.o ? 2 * Math.PI * oidx / this.skillsPerOrbit[this.o] : 0;
+    private getArc = (oidx: number): number => this.skillsPerOrbit.length > this.o ? 2 * Math.PI * oidx / this.skillsPerOrbit[this.o]/*this.getOrbitAngle(this.oidx, this.skillsPerOrbit[this.o])*/ : 0;
     private getX = (arc: number): number => this.orbitRadii.length > this.o ? Math.ceil((this.group.x * this.scale)) - Math.ceil(this.orbitRadii[this.o] * this.scale) * Math.sin(-arc) : 0;
     private getY = (arc: number): number => this.orbitRadii.length > this.o ? Math.ceil((this.group.y * this.scale)) - Math.ceil(this.orbitRadii[this.o] * this.scale) * Math.cos(-arc) : 0;
 
@@ -309,7 +309,7 @@ export class SkillNode implements ISkillNode {
         if (this.spc.length > 0 || other.spc.length > 0) {
             return null;
         }
-        if ((this.is(SkillNodeStates.Pathing) || this.is(SkillNodeStates.Hovered)) && (!other.is(SkillNodeStates.Pathing) && !other.is(SkillNodeStates.Hovered) && !other.is(SkillNodeStates.Active) )) {
+        if ((this.is(SkillNodeStates.Pathing) || this.is(SkillNodeStates.Hovered)) && (!other.is(SkillNodeStates.Pathing) && !other.is(SkillNodeStates.Hovered) && !other.is(SkillNodeStates.Active))) {
             return null;
         }
         if (this.g === other.g && this.o === other.o) {
@@ -432,7 +432,7 @@ export class SkillNode implements ISkillNode {
 
     private createTextAtOidx = (oidx: number, text: string = ""): PIXI.Container => {
         if (text === "") {
-            text = `${oidx}: ${this.g}`;
+            text = `${oidx}`;
         }
         let text_graphic = new PIXI.Text(text, { fill: 0xFFFFFF, align: 'center', fontSize: 24 });
         let arc = this.getArc(oidx);

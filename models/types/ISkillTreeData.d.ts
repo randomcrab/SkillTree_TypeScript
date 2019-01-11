@@ -4,7 +4,7 @@
     characterData: { [id: string]: ICharacter };
     groups: { [id: string]: IGroup };
     root: IRootNode;
-    nodes: { [id: string]: ISkillNode };
+    nodes: Array<ISkillNode>;
     extraImages: { [id: string]: IClassImage };
     min_x: number;
     min_y: number;

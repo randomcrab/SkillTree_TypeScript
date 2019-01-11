@@ -11,9 +11,10 @@ export class SkillTreeCodec implements ISkillTreeCodec {
         bytes.push(skillTreeData.version >> 8 & 0xFF);
         bytes.push(skillTreeData.version >> 0 & 0xFF);
         bytes.push(classid);
-        bytes.push(ascid);
+        if (skillTreeData.version >= 4) {
+            bytes.push(ascid);
+        }
         bytes.push(skillTreeData.fullscreen);
-
         let nodes = new Array<ISkillNode>();
         for (let id in skilledNodes) {
             nodes.push(skilledNodes[id]);
@@ -32,22 +33,24 @@ export class SkillTreeCodec implements ISkillTreeCodec {
     }
 
     decodeURL(encoding: string, skillTreeData: ISkillTreeData): SkillTreeDefinition {
-        let skillTreeDefinition: SkillTreeDefinition = { Version: 4, Class: 0, Ascendancy: 0, Fullscreen: 0, Nodes: new Array<ISkillNode>() };
+        let skillTreeDefinition: SkillTreeDefinition = { Version: 3, Class: 0, Ascendancy: 0, Fullscreen: 0, Nodes: new Array<ISkillNode>() };
         let bytes = this.Base64ToUint8Array(encoding);
         skillTreeDefinition.Version = bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
         skillTreeDefinition.Class = bytes[4];
-        skillTreeDefinition.Ascendancy = bytes[5];
-
-        if (skillTreeDefinition.Version > 3) {
-            skillTreeDefinition.Fullscreen = bytes[6];
+        let start = 5;
+        if (skillTreeDefinition.Version >= 4) {
+            skillTreeDefinition.Ascendancy = bytes[start++];
         }
-        for (let i = (skillTreeDefinition.Version > 3 ? 7 : 6); i < bytes.length; i += 2) {
+        skillTreeDefinition.Fullscreen = bytes[start++];
+
+        for (let i = start; i < bytes.length; i += 2) {
             let id = bytes[i] << 8 | bytes[i + 1];
-            let node = skillTreeData.nodes[id];
+            let node = skillTreeData.nodes.find(node => node.id === id);
             if (node !== undefined) {
                 skillTreeDefinition.Nodes.push(node);
             }
         }
+        
         return skillTreeDefinition;
     }
 
