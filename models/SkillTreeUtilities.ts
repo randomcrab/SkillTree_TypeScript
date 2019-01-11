@@ -77,7 +77,7 @@ export class SkillTreeUtilities {
     private broadcastSkillCounts = () => {
         let nodes = this.skillTreeData.getNodes();
         //need to add bandits here
-        let maximumNormalPoints = 121;
+        let maximumNormalPoints = 120;
         let maximumAscendancyPoints = 8;
         let normalNodes = 0;
         let ascNodes = 0;
@@ -151,19 +151,18 @@ export class SkillTreeUtilities {
 
     public searchChange = (str: string | undefined = undefined) => {
         this.clearState(SkillNodeStates.Highlighted);
-        if (str === undefined || str.length === 0) {
-            return;
-        }
 
-        let nodes = this.skillTreeData.getNodes();
-        let regex = new RegExp(str, "gi");
-        for (let id in nodes) {
-            let node = nodes[id];
-            if (node.isAscendancyStart || node.spc.length > 0) {
-                continue;
-            }
-            if (node.dn.match(regex) !== null || node.sd.find(stat => stat.match(regex) !== null) !== undefined) {
-                node.add(SkillNodeStates.Highlighted);
+        if (str !== undefined && str.length !== 0) {
+            let nodes = this.skillTreeData.getNodes();
+            let regex = new RegExp(str, "gi");
+            for (let id in nodes) {
+                let node = nodes[id];
+                if (node.isAscendancyStart || node.spc.length > 0) {
+                    continue;
+                }
+                if (node.dn.match(regex) !== null || node.sd.find(stat => stat.match(regex) !== null) !== undefined) {
+                    node.add(SkillNodeStates.Highlighted);
+                }
             }
         }
 

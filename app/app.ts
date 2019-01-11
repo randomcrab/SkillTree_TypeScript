@@ -24,7 +24,7 @@ namespace App {
         }
 
         let oxhr = new XMLHttpRequest();
-        oxhr.open("GET", `/data/Opts.json?t=${(new Date()).getTime()}`, false);
+        oxhr.open("GET", `data/Opts.json?t=${(new Date()).getTime()}`, false);
         oxhr.onload = () => {
             if (oxhr.status === 200) {
                 skillTreeOptions = JSON.parse(oxhr.responseText);
@@ -35,7 +35,7 @@ namespace App {
         oxhr.send();
 
         let dxhr = new XMLHttpRequest();
-        dxhr.open("GET", `/data/SkillTree.json?t=${(new Date()).getTime()}`, false);
+        dxhr.open("GET", `data/SkillTree.json?t=${(new Date()).getTime()}`, false);
         dxhr.onload = () => {
             if (dxhr.status === 200) {
                 skillTreeData = new SkillTreeData(JSON.parse(dxhr.responseText), skillTreeOptions);
@@ -132,7 +132,10 @@ namespace App {
             updateHover = true;
             drawHover();
         });
-        SkillTreeEvents.on("skilltree", "hovered-nodes-end", () => updateHover = false);
+        SkillTreeEvents.on("skilltree", "hovered-nodes-end", () => {
+            updateHover = false;
+            drawHover();
+        });
         SkillTreeEvents.on("skilltree", "active-nodes-update", drawActive);
 
         SkillTreeEvents.on("skilltree", "normal-node-count", (count: number) => { let e = document.getElementById("skillTreeNormalNodeCount"); if (e !== null) e.innerHTML = count.toString(); });
@@ -404,7 +407,7 @@ namespace App {
         if (highlights.children.length > 0) {
             highlights.removeChildren();
         }
-        let nodes = skillTreeData.getNodes();
+        let nodes = skillTreeData.getNodes(SkillNodeStates.Highlighted);
         for (let id in nodes) {
             let node = nodes[id];
             let highlight = node.createNodeHighlight();
@@ -464,14 +467,14 @@ namespace App {
     let pathing_connections: PIXI.Container = new PIXI.Container();
     let pathing_skillIcons: PIXI.Container = new PIXI.Container();
     export const drawHover = () => {
+        if (viewport.children.indexOf(tooltip) > 0) {
+            viewport.removeChild(tooltip);
+        }
         if (viewport.children.indexOf(pathing_connections) > 0) {
             viewport.removeChild(pathing_connections);
         }
         if (viewport.children.indexOf(pathing_skillIcons) > 0) {
             viewport.removeChild(pathing_skillIcons);
-        }
-        if (viewport.children.indexOf(tooltip) > 0) {
-            viewport.removeChild(tooltip);
         }
 
         if (tooltip.children.length > 0) {
