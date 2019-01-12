@@ -1,6 +1,7 @@
 ﻿import { SkillTreeUtilities } from "./SkillTreeUtilities";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import { SkillTreeCodec } from "./SkillTreeCodec";
+import { TextStyle, Text, Graphics } from "pixi.js";
 
 export class SkillNode implements ISkillNode {
     id: number;
@@ -302,7 +303,7 @@ export class SkillNode implements ISkillNode {
         return container;
     }
 
-    public createConnection = (other: SkillNode): PIXI.Sprite | null => {
+    public createConnection = (other: SkillNode): PIXI.Sprite | PIXI.Container | null => {
         if ((this.ascendancyName !== "" && other.ascendancyName === "") || (this.ascendancyName === "" && other.ascendancyName !== "")) {
             return null;
         }
@@ -319,54 +320,50 @@ export class SkillNode implements ISkillNode {
         }
     }
 
-    private createArcConnection = (other: SkillNode): PIXI.Sprite => {
+    private createArcConnection = (other: SkillNode): PIXI.Container | PIXI.Sprite => {
         let connectionType = this.getConnectionType(other);
-        var oidx = this.getMidpoint(this, other, this.skillsPerOrbit);
-        let arc = this.getArc(oidx);
-        let x = this.getX(arc);
-        let y = this.getY(arc);
-        let arc_offset = 0.3125;
-        switch (connectionType) {
-            case "Active":
-                switch (this.o) {
-                    case 1:
-                        arc_offset = .42;
-                        break;
-                    case 2:
-                        arc_offset = .37;
-                        break;
-                    case 3:
-                        arc_offset = .34;
-                        break;
-                    case 4:
-                        arc_offset = .33;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            case "Intermediate":
-            case "Normal":
-                break;
+
+        let startAngle = this.arc < other.arc ? this.arc : other.arc;
+        let endAngle = this.arc < other.arc ? other.arc : this.arc;
+
+        var diff = endAngle - startAngle;
+        if (diff > Math.PI) {
+            var c = 2 * Math.PI - diff;
+            startAngle = endAngle;
+            endAngle = startAngle + c;
         }
 
-        //Calculate the bounds of the arc
-        let texture = PIXI.Texture.from(`Orbit${this.o}${connectionType}`);
-        let length = Math.hypot(this.x - x, this.y - y) * 2;
-        let rectw = Math.min(length * .75, texture.baseTexture.width);
-        let recth = Math.min(length * .75, texture.baseTexture.height);
-        let rect = new PIXI.Rectangle((texture.baseTexture.width - rectw) * arc_offset, (texture.baseTexture.height - recth) * arc_offset, rectw, recth);
+        startAngle -= Math.PI / 2;
+        endAngle -= Math.PI / 2;
 
-        //Apply the bounds of the arc
-        var arcTexture = new PIXI.Texture(texture.baseTexture, rect);
-        let arcGraphic = new PIXI.Sprite(arcTexture);
-        arcGraphic.position.set(x, y);
-        arcGraphic.rotation = arc + Math.PI / 4;
-        arcGraphic.anchor.set(arc_offset);
-        if (this.is(SkillNodeStates.Active | SkillNodeStates.Pathing) && other.is(SkillNodeStates.Active | SkillNodeStates.Pathing)) {
-            arcGraphic.tint = 0xFF0000;
+        let arcContainer = new PIXI.Container();
+        let angle = endAngle - startAngle;
+        let arcsNeeded = Math.ceil(angle / (Math.PI / 2));
+        let initial_rotation = Math.PI / 2 + startAngle;
+
+        for (var i = 0; i < arcsNeeded; ++i) {
+            let arcGraphic = new PIXI.Graphics();
+            arcGraphic.lineStyle(5, 0xFF0000);
+            arcGraphic.arc(this.group.x * this.scale, this.group.y * this.scale, this.orbitRadii[this.o] * this.scale, startAngle, endAngle, false);
+            arcContainer.addChild(arcGraphic);
+
+            let texture = PIXI.Texture.from(`Orbit${this.o}${connectionType}`);
+            let arcSprite = new PIXI.Sprite(texture);
+            arcSprite.rotation = angle + initial_rotation;
+            arcSprite.position.set(this.group.x * this.scale, this.group.y * this.scale);
+            arcSprite.anchor.set(1);
+            arcSprite.mask = arcGraphic;
+            arcContainer.addChild(arcSprite);
+            if (this.is(SkillNodeStates.Active | SkillNodeStates.Pathing) && other.is(SkillNodeStates.Active | SkillNodeStates.Pathing)) {
+                arcSprite.tint = 0xFF0000;
+            }
+            if (angle < Math.PI / 2) {
+                continue
+            }
+            angle -= Math.PI / 2
         }
-        return arcGraphic;
+
+        return arcContainer;
     }
 
     private createLineConnection = (other: SkillNode): PIXI.Sprite => {
